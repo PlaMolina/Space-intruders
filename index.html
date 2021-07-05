@@ -1,0 +1,199 @@
+
+<!DOCTYPE html>
+
+<html>
+
+<head>
+  <title>kaboom</title>
+  <meta charset="utf-8">
+  <style>
+    * {
+      margin: 0;
+    }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+<script src="https://kaboomjs.com/lib/0.5.0/kaboom.js"></script>
+<script src="https://kaboomjs.com/lib/0.5.0/plugins/aseprite.js"></script>
+<script src="https://kaboomjs.com/lib/0.5.0/plugins/pedit.js"></script>
+<script src="https://kaboomjs.com/pub/legacy/kbmsprite.js"></script>
+
+  <script>
+
+kaboom({
+  ...{"fullscreen":true,"width":240,"height":240,"scale":1,"startScene":"main","version":"0.5.0","clearColor":[0,0,0,1],"debug":true},
+  global: true,
+  plugins: [ peditPlugin, asepritePlugin, kbmspritePlugin ],
+});
+loadKbmsprite("space-invader", "sprites/space-invader.kbmsprite");
+loadKbmsprite("spaceship", "sprites/spaceship.kbmsprite");
+loadKbmsprite("wall", "sprites/wall.kbmsprite");
+scene("lose", (args = {}) => {
+add([
+  text("Your score is"),
+  origin('center'),
+  scale(2),
+  pos(width()/2, height()/3)
+])
+
+add([
+  text(args.score),
+  origin('center'),
+  scale(10),
+  pos(width()/2, height()/2)
+])
+
+setTimeout(()=>{add([
+  text("Thanks for playing"),
+  origin('center'),
+  scale(2),
+  pos(width()/2, height()/1.5)
+])}, 1500)
+
+setTimeout(()=>{add([
+  text("Bye"),
+  origin('center'),
+  scale(2),
+  pos(width()/2, height()/1.3)
+])}, 3000)
+
+});
+scene("main", (args = {}) => {
+layer([
+  'obj',
+  'ui'],
+  'obj')
+
+addLevel([
+  '!^^^^^^^^^^^^    &',
+  '!^^^^^^^^^^^^    &',
+  '!^^^^^^^^^^^^    &',
+  '!                &',
+  '!                &',
+  '!                &',
+  '!                &',
+  '!                &',
+  '!                &',
+], {
+    width: 30,
+    height: 22,
+    '^': [sprite('space-invader'), scale(0.7), 'space-invader'],
+    '!': [sprite('wall'), 'left-wall'],
+    '&': [sprite('wall'), 'right-wall'],
+  })
+
+const invaderSpeed = 100
+let currentSpeed = invaderSpeed
+const levelDown = 50
+const bulletSpeed = 400
+const moveSpeed = 100
+const timeLeft = 1
+
+const player = add([sprite('spaceship'),
+pos(width() / 2, height() / 2),
+origin('center')])
+
+const timer = add([
+  text('0'),
+  pos(5, 50),
+  scale(2),
+  layer('ui'),
+  {
+    time: timeLeft,
+  }
+])
+
+const shot = (p) => {
+  add([
+    rect(6, 10),
+    pos(p),
+    origin('center'),
+    color(20, 20, 1),
+    'bullet'
+  ])
+}
+
+keyDown('left', () => {
+  player.move(-moveSpeed, 0)
+})
+keyDown('right', () => {
+  player.move(moveSpeed, 0)
+})
+keyPress('space', () => {
+  shot(player.pos.add(0, -10))
+})
+
+const score = add([
+  text('0'),
+  pos(5, 10),
+  layer('ui'),
+  scale(3),
+  {
+    value: 0,
+  }
+])
+
+timer.action(() => {
+  timer.time -= dt()
+  timer.text = timer.time.toFixed(1)
+  if (timer.time <= 0) {
+    go('lose', { score: score.value })
+  }
+})
+
+action('space-invader', (s) => {
+  s.move(currentSpeed, 0)
+})
+
+collides('space-invader', 'right-wall', () => {
+  currentSpeed = -invaderSpeed
+  every('space-invader', (s) => {
+    s.move(0, levelDown)
+  })
+})
+collides('space-invader', 'left-wall', () => {
+  currentSpeed = invaderSpeed
+  every('space-invader', (s) => {
+    s.move(0, levelDown)
+  })
+})
+
+player.overlaps('space-invader', () => {
+  go('lose', { score: score.value })
+})
+
+action('space-invader', (s) => {
+  if (s.pos.y >= height() / 2) {
+    go('lose', { score: score.value })
+  }
+})
+action('bullet', (b) => {
+  b.move(0, -bulletSpeed)
+  if (b.pos.y < 0) {
+    destroy(b)
+  }
+})
+
+collides('bullet', 'space-invader', (b, s) => {
+  destroy(b),
+    destroy(s),
+    score.value++
+  score.text = score.value
+})
+});
+start("main");
+
+  </script>
+</body>
+
+</html>
